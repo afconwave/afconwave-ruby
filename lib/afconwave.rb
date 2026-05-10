@@ -29,18 +29,35 @@ module AfconWave
   class Client
     attr_accessor :secret_key, :base_url, :timeout
 
-    def initialize(secret_key:, base_url: 'https://api.afconwave.com/v1', timeout: 30)
+    def initialize(secret_key:, base_url: 'https://api.afconwave.com/api/v1', timeout: 30)
       @secret_key = secret_key
       @base_url = base_url
       @timeout = timeout
     end
 
-    def self.verify_webhook_signature(payload:, signature:, secret:)
+    def self.verify_webhook_signature(payload:, signature:, secret:, tolerance: 300)
+      # 1. Verify Signature (timing-safe compare via OpenSSL stdlib)
       expected = OpenSSL::HMAC.hexdigest('sha256', secret, payload)
-      Rack::Utils.secure_compare(expected, signature)
-    rescue NameError
-      # Fallback if Rack is not available
-      expected == signature
+
+      # OpenSSL.fixed_length_secure_compare requires equal-length inputs.
+      return false unless signature.is_a?(String) && expected.bytesize == signature.bytesize
+      return false unless OpenSSL.fixed_length_secure_compare(expected, signature)
+
+      # 2. Verify Timestamp (Replay Protection)
+      begin
+        data = JSON.parse(payload)
+        if data['timestamp']
+          current_time = Time.now.to_i # seconds
+          webhook_time = data['timestamp'] / 1000 # convert ms to seconds
+          age = (current_time - webhook_time).abs
+
+          return false if age > tolerance
+        end
+      rescue JSON::ParserError
+        # Non-JSON payload, signature is valid but can't check timestamp
+      end
+
+      true
     end
 
     def payments; @payments ||= Resource::Payments.new(self); end
