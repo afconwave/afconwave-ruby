@@ -5,11 +5,9 @@ require 'openssl'
 require_relative 'afconwave/version'
 
 module AfconWave
-  # Shortcut to create a new client
   def self.new(secret_key:, **options)
     Client.new(secret_key: secret_key, **options)
   end
-  # ─── Exceptions ──────────────────────────────────────────────────────────────
 
   class Error < StandardError
     attr_reader :status_code, :code
@@ -24,12 +22,10 @@ module AfconWave
   class AuthError < Error; end
   class PaymentError < Error; end
 
-  # ─── Main Client ──────────────────────────────────────────────────────────────
-
   class Client
     attr_accessor :secret_key, :base_url, :timeout
 
-    def initialize(secret_key:, base_url: 'https://api.afconwave.com/v1', timeout: 30)
+    def initialize(secret_key:, base_url: 'https://api.afconwave.com/api/v1', timeout: 30)
       @secret_key = secret_key
       @base_url = base_url
       @timeout = timeout
@@ -38,28 +34,22 @@ module AfconWave
     def self.verify_webhook_signature(payload:, signature:, secret:, tolerance: 300)
       return false if signature.nil? || secret.nil?
 
-      # 1. Verify Signature (timing-safe compare via OpenSSL stdlib)
       expected = OpenSSL::HMAC.hexdigest('sha256', secret, payload)
 
-      # OpenSSL.fixed_length_secure_compare requires equal-length inputs.
       return false unless signature.is_a?(String) && expected.bytesize == signature.bytesize
       return false unless OpenSSL.fixed_length_secure_compare(expected, signature)
 
-      # 2. Verify Timestamp (Replay Protection)
       begin
         data = JSON.parse(payload)
         timestamp = data['timestamp'] || data['created_at'] || data['createdAt']
-        
+
         if timestamp
-          current_time = Time.now.to_i # seconds
-          # Handle both ms and seconds
+          current_time = Time.now.to_i
           webhook_time = timestamp > 10**10 ? timestamp / 1000 : timestamp
           age = (current_time - webhook_time).abs
-
           return false if age > tolerance
         end
       rescue JSON::ParserError
-        # Non-JSON payload, signature is valid but can't check timestamp
       end
 
       true
@@ -93,7 +83,7 @@ module AfconWave
       req['Authorization'] = "Bearer #{secret_key}"
       req['Content-Type'] = 'application/json'
       req['Accept'] = 'application/json'
-      req['User-Agent'] = "AfconWave-Ruby-SDK/1.1.0"
+      req['User-Agent'] = "AfconWave-Ruby-SDK/1.1.1"
 
       response = http.request(req)
       res_data = JSON.parse(response.body) rescue { 'error' => 'Invalid JSON response' }
@@ -107,8 +97,6 @@ module AfconWave
 
       res_data['data'] || res_data
     end
-
-    # ─── Top-level Convenience Methods ───────────────────────────────────────
 
     def get_balances; request(method: 'GET', path: '/balances'); end
     def create_payment(**data); payments.create(**data); end
