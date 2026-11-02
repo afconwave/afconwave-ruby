@@ -1,9 +1,9 @@
 require_relative 'lib/afconwave'
 
 begin
-  client = AfconWave.new(secret_key: 'afcw_sk_test_123')
-  puts "Ruby SDK Instantiated Successfully!" if client.is_a?(AfconWave::Client)
+  client = AfconWave::Client.new(secret_key: 'afcw_test_smoke_only')
+  puts 'Ruby SDK Instantiated Successfully!'
 rescue => e
-  puts "Test failed: #{e.message}"
+  puts "Failed: #{e.message}"
   exit 1
 end
