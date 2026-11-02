@@ -4,8 +4,8 @@ require "afconwave/version"
 Gem::Specification.new do |s|
   s.name        = "afconwave"
   s.version     = AfconWave::VERSION
-  s.summary     = "Official Ruby SDK for the AfconWave Payments API"
-  s.description = "Integrate AfconWave payments, payouts, and refunds into your Ruby or Rails applications."
+  s.summary     = "Official Ruby SDK for AfconWave API v2"
+  s.description = "Integrate AfconWave deposits, withdrawals, wallets, and FX into Ruby or Rails applications."
   s.authors     = ["AfconWave Team"]
   s.email       = ["support@afconwave.com"]
   s.homepage    = "https://github.com/afconwave/afconwave-ruby"
